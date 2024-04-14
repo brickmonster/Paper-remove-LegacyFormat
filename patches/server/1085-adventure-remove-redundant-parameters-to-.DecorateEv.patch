@@ -1,0 +1,22 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: brickmonster <92665597+brickmonster@users.noreply.github.com>
+Date: Sun, 14 Apr 2024 04:49:04 +0100
+Subject: [PATCH] adventure: remove redundant parameters to ...DecorateEvent
+
+
+diff --git a/src/main/java/io/papermc/paper/adventure/ImprovedChatDecorator.java b/src/main/java/io/papermc/paper/adventure/ImprovedChatDecorator.java
+index 6eb5cc9f6f117930e34583d81a4b1a4d0c652c11..7d3daf9cb15cf4c637406d7a77cd0240782343a8 100644
+--- a/src/main/java/io/papermc/paper/adventure/ImprovedChatDecorator.java
++++ b/src/main/java/io/papermc/paper/adventure/ImprovedChatDecorator.java
+@@ -41,9 +41,9 @@ public final class ImprovedChatDecorator implements ChatDecorator {
+             final AsyncChatDecorateEvent event;
+             if (commandSourceStack != null) {
+                 // TODO more command decorate context
+-                event = new AsyncChatCommandDecorateEvent(true, craftPlayer, initialResult, initialResult);
++                event = new AsyncChatCommandDecorateEvent(craftPlayer, initialResult);
+             } else {
+-                event = new AsyncChatDecorateEvent(true, craftPlayer, initialResult, initialResult);
++                event = new AsyncChatDecorateEvent(craftPlayer, initialResult);
+             }
+ 
+             server.server.getPluginManager().callEvent(event);

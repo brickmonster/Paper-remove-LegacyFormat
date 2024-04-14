@@ -1,0 +1,19 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: brickmonster <92665597+brickmonster@users.noreply.github.com>
+Date: Sun, 14 Apr 2024 04:44:59 +0100
+Subject: [PATCH] adventure: remove unnecessary old check as requested
+
+
+diff --git a/src/main/java/io/papermc/paper/adventure/ImprovedChatDecorator.java b/src/main/java/io/papermc/paper/adventure/ImprovedChatDecorator.java
+index f6005e656f4ca985de57b7c9931fffa13cb61ef4..be232d09cafde0e47fa1a7b8bea6725f935d6ff6 100644
+--- a/src/main/java/io/papermc/paper/adventure/ImprovedChatDecorator.java
++++ b/src/main/java/io/papermc/paper/adventure/ImprovedChatDecorator.java
+@@ -50,7 +50,7 @@ public final class ImprovedChatDecorator implements ChatDecorator {
+ 
+             server.server.getPluginManager().callEvent(event);
+ 
+-            if (!event.isCancelled() && !event.result().equals(PaperAdventure.asAdventure(originalMessage))) {
++            if (!event.isCancelled()) {
+                 return PaperAdventure.asVanilla(event.result());
+             }
+ 

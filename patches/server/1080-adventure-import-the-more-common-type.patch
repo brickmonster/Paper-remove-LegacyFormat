@@ -1,0 +1,51 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: brickmonster <92665597+brickmonster@users.noreply.github.com>
+Date: Sun, 14 Apr 2024 02:42:26 +0100
+Subject: [PATCH] adventure: import the more common type
+
+
+diff --git a/src/main/java/io/papermc/paper/adventure/ImprovedChatDecorator.java b/src/main/java/io/papermc/paper/adventure/ImprovedChatDecorator.java
+index e3b7cf7dc8a22a0fd894a1d9ae027e718113ef32..f6005e656f4ca985de57b7c9931fffa13cb61ef4 100644
+--- a/src/main/java/io/papermc/paper/adventure/ImprovedChatDecorator.java
++++ b/src/main/java/io/papermc/paper/adventure/ImprovedChatDecorator.java
+@@ -2,10 +2,10 @@ package io.papermc.paper.adventure;
+ 
+ import io.papermc.paper.event.player.AsyncChatCommandDecorateEvent;
+ import io.papermc.paper.event.player.AsyncChatDecorateEvent;
+-import net.kyori.adventure.text.Component;
+ import net.minecraft.commands.CommandSourceStack;
+ import net.minecraft.network.chat.ChatDecorator;
+ import net.minecraft.server.MinecraftServer;
++import net.minecraft.network.chat.Component;
+ import net.minecraft.server.level.ServerPlayer;
+ import org.bukkit.craftbukkit.entity.CraftPlayer;
+ import org.checkerframework.checker.nullness.qual.NonNull;
+@@ -23,22 +23,23 @@ public final class ImprovedChatDecorator implements ChatDecorator {
+     }
+ 
+     @Override
+-    public CompletableFuture<net.minecraft.network.chat.Component> decorate(@Nullable ServerPlayer sender, net.minecraft.network.chat.Component message) {
++    public CompletableFuture<Component> decorate(@Nullable ServerPlayer sender, Component message) {
+         return decorate(server, sender, null, message);
+     }
+ 
+     @Override
+-    public CompletableFuture<net.minecraft.network.chat.Component> decorate(@Nullable ServerPlayer sender, @Nullable CommandSourceStack commandSourceStack, net.minecraft.network.chat.Component message) {
++    public CompletableFuture<Component> decorate(@Nullable ServerPlayer sender, @Nullable CommandSourceStack commandSourceStack, Component message) {
+         return decorate(server, sender, commandSourceStack, message);
+     }
+ 
+-    private static CompletableFuture<net.minecraft.network.chat.Component> decorate(final MinecraftServer server, final @Nullable ServerPlayer player, final @Nullable CommandSourceStack commandSourceStack, final net.minecraft.network.chat.Component originalMessage) {
++    private static CompletableFuture<Component> decorate(final MinecraftServer server, final @Nullable ServerPlayer player, final @Nullable CommandSourceStack commandSourceStack, final Component originalMessage) {
+         return CompletableFuture.supplyAsync(() -> {
+             // Make a copy so that if the event if cancelled we can guarantee the original is being returned.
+-            final Component originalMessageCopy = PaperAdventure.asAdventure(originalMessage.copy());
+-            final Component initialResult = PaperAdventure.asAdventure(originalMessage.copy());
++            final net.kyori.adventure.text.Component originalMessageCopy = PaperAdventure.asAdventure(originalMessage.copy());
++            final net.kyori.adventure.text.Component initialResult = PaperAdventure.asAdventure(originalMessage.copy());
+ 
+             final @Nullable CraftPlayer craftPlayer = player == null ? null : player.getBukkitEntity();
++
+             final AsyncChatDecorateEvent event;
+             if (commandSourceStack != null) {
+                 // TODO more command decorate context

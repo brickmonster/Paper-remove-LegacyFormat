@@ -1,0 +1,27 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: brickmonster <92665597+brickmonster@users.noreply.github.com>
+Date: Sun, 14 Apr 2024 01:18:16 +0100
+Subject: [PATCH] adventure: don't be afraid of simple ternaries
+
+
+diff --git a/src/main/java/io/papermc/paper/adventure/ChatDecorationProcessor.java b/src/main/java/io/papermc/paper/adventure/ChatDecorationProcessor.java
+index f1494c6785a2ca1c33775e714be6013efceccd5e..8f47301c2c2e51bab69c4fffd564a3a9bf292aca 100644
+--- a/src/main/java/io/papermc/paper/adventure/ChatDecorationProcessor.java
++++ b/src/main/java/io/papermc/paper/adventure/ChatDecorationProcessor.java
+@@ -4,7 +4,6 @@ import io.papermc.paper.event.player.AsyncChatCommandDecorateEvent;
+ import io.papermc.paper.event.player.AsyncChatDecorateEvent;
+ import java.util.concurrent.CompletableFuture;
+ import net.kyori.adventure.text.Component;
+-import net.minecraft.Optionull;
+ import net.minecraft.commands.CommandSourceStack;
+ import net.minecraft.network.chat.ChatDecorator;
+ import net.minecraft.server.MinecraftServer;
+@@ -21,7 +20,7 @@ public final class ChatDecorationProcessor {
+             final Component originalMessage = PaperAdventure.asAdventure(originalMessageVanilla);
+             final Component initialResult = PaperAdventure.WRAPPER_AWARE_SERIALIZER.deserialize(PaperAdventure.asVanilla(originalMessage));
+ 
+-            final @Nullable CraftPlayer craftPlayer = Optionull.map(player, ServerPlayer::getBukkitEntity);
++            final @Nullable CraftPlayer craftPlayer = player == null ? null : player.getBukkitEntity();
+             final AsyncChatDecorateEvent event;
+             if (commandSourceStack != null) {
+                 // TODO more command decorate context

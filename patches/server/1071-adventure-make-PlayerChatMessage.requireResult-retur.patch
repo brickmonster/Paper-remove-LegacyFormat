@@ -1,0 +1,44 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: brickmonster <92665597+brickmonster@users.noreply.github.com>
+Date: Sun, 14 Apr 2024 01:33:55 +0100
+Subject: [PATCH] adventure: make PlayerChatMessage.requireResult return a
+ component instead of a Result
+
+
+diff --git a/src/main/java/io/papermc/paper/adventure/ChatProcessor.java b/src/main/java/io/papermc/paper/adventure/ChatProcessor.java
+index 58af5dbe546b96486aea24447a0a7453e684dbeb..03cc762cf9684bf56037b8755c7a3b2c1d10f94e 100644
+--- a/src/main/java/io/papermc/paper/adventure/ChatProcessor.java
++++ b/src/main/java/io/papermc/paper/adventure/ChatProcessor.java
+@@ -82,7 +82,7 @@ public final class ChatProcessor {
+         Even if the legacy preview event modified the format, and the client signed the formatted message, this should
+         still just be the message component.
+          */
+-        this.paper$originalMessage = this.message.requireResult().message();
++        this.paper$originalMessage = this.message.requireResult();
+         this.outgoing = OutgoingChatMessage.create(this.message);
+     }
+ 
+@@ -181,7 +181,7 @@ public final class ChatProcessor {
+ 
+     private void readModernModifications(final AbstractChatEvent chatEvent, final ChatRenderer originalRenderer) {
+         if (this.message.unsignedContent() != null) {
+-            this.flags.set(MESSAGE_CHANGED, !chatEvent.message().equals(this.message.requireResult().message()));
++            this.flags.set(MESSAGE_CHANGED, !chatEvent.message().equals(this.message.requireResult()));
+         } else {
+             this.flags.set(MESSAGE_CHANGED, !chatEvent.message().equals(this.paper$originalMessage));
+         }
+diff --git a/src/main/java/net/minecraft/network/chat/PlayerChatMessage.java b/src/main/java/net/minecraft/network/chat/PlayerChatMessage.java
+index 714cc1a2307ee732d65dcc1a0674ba6d5de17fb8..c538e03c5d8e5a4515ae3836d2c9935a6e4ee14f 100644
+--- a/src/main/java/net/minecraft/network/chat/PlayerChatMessage.java
++++ b/src/main/java/net/minecraft/network/chat/PlayerChatMessage.java
+@@ -29,8 +29,8 @@ public record PlayerChatMessage(
+         final PlayerChatMessage msg = this.withUnsignedContent(result);
+         return new PlayerChatMessage(msg.link, msg.signature, msg.signedBody, msg.unsignedContent, msg.filterMask, new net.minecraft.network.chat.ChatDecorator.ModernResult(result));
+     }
+-    public net.minecraft.network.chat.ChatDecorator.Result requireResult() {
+-        return Objects.requireNonNull(this.result, "Requires a decoration result to be set here");
++    public net.kyori.adventure.text.Component requireResult() {
++        return Objects.requireNonNull(this.result, "Requires a decoration result to be set here").message();
+     }
+     public final class AdventureView implements net.kyori.adventure.chat.SignedMessage {
+         private AdventureView() {

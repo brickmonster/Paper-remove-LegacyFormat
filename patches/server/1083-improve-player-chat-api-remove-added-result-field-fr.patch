@@ -1,0 +1,20 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: brickmonster <92665597+brickmonster@users.noreply.github.com>
+Date: Sun, 14 Apr 2024 04:53:35 +0100
+Subject: [PATCH] improve player chat api: remove added result field from
+ PlayerChatMessage,it's always the same as unsignedContent
+
+
+diff --git a/src/main/java/org/bukkit/craftbukkit/entity/CraftPlayer.java b/src/main/java/org/bukkit/craftbukkit/entity/CraftPlayer.java
+index bcef237a4275f57d425ee418e99c9214e532c92a..4aa6084fb3540f7811f13e09b5d11e2e0cf48220 100644
+--- a/src/main/java/org/bukkit/craftbukkit/entity/CraftPlayer.java
++++ b/src/main/java/org/bukkit/craftbukkit/entity/CraftPlayer.java
+@@ -665,7 +665,7 @@ public class CraftPlayer extends CraftHumanEntity implements Player {
+             if (msg.startsWith("/")) {
+                 this.getHandle().connection.handleCommand(msg);
+             } else {
+-                final PlayerChatMessage playerChatMessage = PlayerChatMessage.system(msg).withResult(Component.literal(msg));
++                final PlayerChatMessage playerChatMessage = PlayerChatMessage.system(msg).withUnsignedContent(Component.literal(msg));
+                 // TODO chat decorating
+                 // TODO text filtering
+                 this.getHandle().connection.chat(msg, playerChatMessage, false);

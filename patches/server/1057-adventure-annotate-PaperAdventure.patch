@@ -1,0 +1,28 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: brickmonster <92665597+brickmonster@users.noreply.github.com>
+Date: Sun, 14 Apr 2024 01:03:31 +0100
+Subject: [PATCH] adventure: annotate PaperAdventure
+
+
+diff --git a/src/main/java/io/papermc/paper/adventure/PaperAdventure.java b/src/main/java/io/papermc/paper/adventure/PaperAdventure.java
+index cf5a4c142ed6d9ab4850373a9041bdc6af5a2a71..41a87166d453ea4977ff0c15dab94c93715ade46 100644
+--- a/src/main/java/io/papermc/paper/adventure/PaperAdventure.java
++++ b/src/main/java/io/papermc/paper/adventure/PaperAdventure.java
+@@ -150,7 +150,7 @@ public final class PaperAdventure {
+ 
+     // Component
+ 
+-    public static Component asAdventure(final net.minecraft.network.chat.Component component) {
++    public static @NotNull Component asAdventure(@Nullable final net.minecraft.network.chat.Component component) {
+         return component == null ? Component.empty() : WRAPPER_AWARE_SERIALIZER.deserialize(component);
+     }
+ 
+@@ -178,7 +178,7 @@ public final class PaperAdventure {
+         return jsons;
+     }
+ 
+-    public static net.minecraft.network.chat.Component asVanilla(final Component component) {
++    public static net.minecraft.network.chat.Component asVanilla(@Nullable final Component component) {
+         if (component == null) return null;
+         if (true) return new AdventureComponent(component);
+         return WRAPPER_AWARE_SERIALIZER.serialize(component);

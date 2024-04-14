@@ -1,0 +1,74 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: brickmonster <92665597+brickmonster@users.noreply.github.com>
+Date: Sun, 14 Apr 2024 01:05:31 +0100
+Subject: [PATCH] adventure: inline processModern
+
+
+diff --git a/src/main/java/io/papermc/paper/adventure/ChatDecorationProcessor.java b/src/main/java/io/papermc/paper/adventure/ChatDecorationProcessor.java
+index c3ef0238870b46f9a343d7835bd94f0c5e853dc7..f1494c6785a2ca1c33775e714be6013efceccd5e 100644
+--- a/src/main/java/io/papermc/paper/adventure/ChatDecorationProcessor.java
++++ b/src/main/java/io/papermc/paper/adventure/ChatDecorationProcessor.java
+@@ -3,7 +3,6 @@ package io.papermc.paper.adventure;
+ import io.papermc.paper.event.player.AsyncChatCommandDecorateEvent;
+ import io.papermc.paper.event.player.AsyncChatDecorateEvent;
+ import java.util.concurrent.CompletableFuture;
+-import java.util.regex.Pattern;
+ import net.kyori.adventure.text.Component;
+ import net.minecraft.Optionull;
+ import net.minecraft.commands.CommandSourceStack;
+@@ -17,39 +16,24 @@ import org.checkerframework.framework.qual.DefaultQualifier;
+ 
+ @DefaultQualifier(NonNull.class)
+ public final class ChatDecorationProcessor {
+-
+-    private static final String DISPLAY_NAME_TAG = "---paper_dn---";
+-    private static final Pattern DISPLAY_NAME_PATTERN = Pattern.compile("%(1\\$)?s");
+-    private static final String CONTENT_TAG = "---paper_content---";
+-    private static final Pattern CONTENT_PATTERN = Pattern.compile("%(2\\$)?s");
+-
+     public static CompletableFuture<ChatDecorator.Result> process(final MinecraftServer server, final @Nullable ServerPlayer player, final @Nullable CommandSourceStack commandSourceStack, final net.minecraft.network.chat.Component originalMessageVanilla) {
+-        final Component originalMessage = PaperAdventure.asAdventure(originalMessageVanilla);
+-        final io.papermc.paper.adventure.ChatDecorationProcessor processor = new io.papermc.paper.adventure.ChatDecorationProcessor();
+-        return processor.process2(server, player, commandSourceStack, originalMessage);
+-    }
+-
+-    public CompletableFuture<ChatDecorator.Result> process2(final MinecraftServer server, final @Nullable ServerPlayer player, final @Nullable CommandSourceStack commandSourceStack, final Component originalMessage) {
+         return CompletableFuture.supplyAsync(() -> {
+-            Component result = PaperAdventure.WRAPPER_AWARE_SERIALIZER.deserialize(PaperAdventure.asVanilla(originalMessage));
+-            return this.processModern(server, player, commandSourceStack, originalMessage, result);
+-        }, server.chatExecutor);
+-    }
++            final Component originalMessage = PaperAdventure.asAdventure(originalMessageVanilla);
++            final Component initialResult = PaperAdventure.WRAPPER_AWARE_SERIALIZER.deserialize(PaperAdventure.asVanilla(originalMessage));
+ 
+-    private ChatDecorator.Result processModern(final MinecraftServer server, final @Nullable ServerPlayer player, final @Nullable CommandSourceStack commandSourceStack, final Component originalMessage, final Component initialResult) {
+-        final @Nullable CraftPlayer craftPlayer = Optionull.map(player, ServerPlayer::getBukkitEntity);
+-
+-        final AsyncChatDecorateEvent event;
+-        if (commandSourceStack != null) {
+-            // TODO more command decorate context
+-            event = new AsyncChatCommandDecorateEvent(true, craftPlayer, originalMessage, initialResult);
+-        } else {
+-            event = new AsyncChatDecorateEvent(true, craftPlayer, originalMessage, initialResult);
+-        }
+-        server.server.getPluginManager().callEvent(event);
+-        if (!event.isCancelled() && !event.result().equals(initialResult)) {
+-            return new ChatDecorator.ModernResult(event.result());
+-        }
+-        return new ChatDecorator.ModernResult(initialResult);
++            final @Nullable CraftPlayer craftPlayer = Optionull.map(player, ServerPlayer::getBukkitEntity);
++            final AsyncChatDecorateEvent event;
++            if (commandSourceStack != null) {
++                // TODO more command decorate context
++                event = new AsyncChatCommandDecorateEvent(true, craftPlayer, originalMessage, initialResult);
++            } else {
++                event = new AsyncChatDecorateEvent(true, craftPlayer, originalMessage, initialResult);
++            }
++            server.server.getPluginManager().callEvent(event);
++            if (!event.isCancelled() && !event.result().equals(initialResult)) {
++                return new ChatDecorator.ModernResult(event.result());
++            }
++            return new ChatDecorator.ModernResult(initialResult);
++        }, server.chatExecutor);
+     }
+ }

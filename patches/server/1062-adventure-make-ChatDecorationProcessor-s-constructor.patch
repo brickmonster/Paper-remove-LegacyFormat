@@ -1,0 +1,44 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: brickmonster <92665597+brickmonster@users.noreply.github.com>
+Date: Sun, 14 Apr 2024 00:46:14 +0100
+Subject: [PATCH] adventure: make ChatDecorationProcessor's constructor private
+
+
+diff --git a/src/main/java/io/papermc/paper/adventure/ChatDecorationProcessor.java b/src/main/java/io/papermc/paper/adventure/ChatDecorationProcessor.java
+index 3fc1ea5185cc3c232b21eb113048599cfb3ccaa6..d42b08d72269bbc68c0c920100047a193f3d7609 100644
+--- a/src/main/java/io/papermc/paper/adventure/ChatDecorationProcessor.java
++++ b/src/main/java/io/papermc/paper/adventure/ChatDecorationProcessor.java
+@@ -29,13 +29,18 @@ public final class ChatDecorationProcessor {
+     final @Nullable CommandSourceStack commandSourceStack;
+     final Component originalMessage;
+ 
+-    public ChatDecorationProcessor(final MinecraftServer server, final @Nullable ServerPlayer player, final @Nullable CommandSourceStack commandSourceStack, final net.minecraft.network.chat.Component originalMessage) {
++    private ChatDecorationProcessor(final MinecraftServer server, final @Nullable ServerPlayer player, final @Nullable CommandSourceStack commandSourceStack, final net.minecraft.network.chat.Component originalMessage) {
+         this.server = server;
+         this.player = player;
+         this.commandSourceStack = commandSourceStack;
+         this.originalMessage = PaperAdventure.asAdventure(originalMessage);
+     }
+ 
++    public static CompletableFuture<ChatDecorator.Result> process(final MinecraftServer server, final @Nullable ServerPlayer player, final @Nullable CommandSourceStack commandSourceStack, final net.minecraft.network.chat.Component originalMessage) {
++        final io.papermc.paper.adventure.ChatDecorationProcessor processor = new io.papermc.paper.adventure.ChatDecorationProcessor(server, player, commandSourceStack, originalMessage);
++        return processor.process();
++    }
++
+     public CompletableFuture<ChatDecorator.Result> process() {
+         return CompletableFuture.supplyAsync(() -> {
+             Component result = io.papermc.paper.adventure.PaperAdventure.WRAPPER_AWARE_SERIALIZER.deserialize(io.papermc.paper.adventure.PaperAdventure.asVanilla(this.originalMessage));
+diff --git a/src/main/java/net/minecraft/server/MinecraftServer.java b/src/main/java/net/minecraft/server/MinecraftServer.java
+index 27db614d46dffc2d10f18d79cc5a084f3421d86b..a3d0e9e5ca7f3fb521c8427930a99647c6662a38 100644
+--- a/src/main/java/net/minecraft/server/MinecraftServer.java
++++ b/src/main/java/net/minecraft/server/MinecraftServer.java
+@@ -2826,8 +2826,7 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
+     public ChatDecorator getChatDecorator() {
+         // Paper start - moved to ChatPreviewProcessor
+         return ChatDecorator.create((sender, commandSourceStack, message) -> {
+-            final io.papermc.paper.adventure.ChatDecorationProcessor processor = new io.papermc.paper.adventure.ChatDecorationProcessor(this, sender, commandSourceStack, message);
+-            return processor.process();
++            return io.papermc.paper.adventure.ChatDecorationProcessor.process(this, sender, commandSourceStack, message);
+         });
+         // Paper end
+     }

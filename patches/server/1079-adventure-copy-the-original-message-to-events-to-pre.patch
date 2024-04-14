@@ -1,0 +1,47 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: brickmonster <92665597+brickmonster@users.noreply.github.com>
+Date: Sun, 14 Apr 2024 02:36:44 +0100
+Subject: [PATCH] adventure: copy the original message to events to prevent
+ tampering if the event is cancelled
+
+
+diff --git a/src/main/java/io/papermc/paper/adventure/ImprovedChatDecorator.java b/src/main/java/io/papermc/paper/adventure/ImprovedChatDecorator.java
+index fa08b61da67baed42e75243d4b7d003965b64b28..e3b7cf7dc8a22a0fd894a1d9ae027e718113ef32 100644
+--- a/src/main/java/io/papermc/paper/adventure/ImprovedChatDecorator.java
++++ b/src/main/java/io/papermc/paper/adventure/ImprovedChatDecorator.java
+@@ -32,24 +32,28 @@ public final class ImprovedChatDecorator implements ChatDecorator {
+         return decorate(server, sender, commandSourceStack, message);
+     }
+ 
+-    private static CompletableFuture<net.minecraft.network.chat.Component> decorate(final MinecraftServer server, final @Nullable ServerPlayer player, final @Nullable CommandSourceStack commandSourceStack, final net.minecraft.network.chat.Component originalMessageVanilla) {
++    private static CompletableFuture<net.minecraft.network.chat.Component> decorate(final MinecraftServer server, final @Nullable ServerPlayer player, final @Nullable CommandSourceStack commandSourceStack, final net.minecraft.network.chat.Component originalMessage) {
+         return CompletableFuture.supplyAsync(() -> {
+-            final Component originalMessage = PaperAdventure.asAdventure(originalMessageVanilla);
+-            final Component initialResult = PaperAdventure.WRAPPER_AWARE_SERIALIZER.deserialize(PaperAdventure.asVanilla(originalMessage));
++            // Make a copy so that if the event if cancelled we can guarantee the original is being returned.
++            final Component originalMessageCopy = PaperAdventure.asAdventure(originalMessage.copy());
++            final Component initialResult = PaperAdventure.asAdventure(originalMessage.copy());
+ 
+             final @Nullable CraftPlayer craftPlayer = player == null ? null : player.getBukkitEntity();
+             final AsyncChatDecorateEvent event;
+             if (commandSourceStack != null) {
+                 // TODO more command decorate context
+-                event = new AsyncChatCommandDecorateEvent(true, craftPlayer, originalMessage, initialResult);
++                event = new AsyncChatCommandDecorateEvent(true, craftPlayer, originalMessageCopy, initialResult);
+             } else {
+-                event = new AsyncChatDecorateEvent(true, craftPlayer, originalMessage, initialResult);
++                event = new AsyncChatDecorateEvent(true, craftPlayer, originalMessageCopy, initialResult);
+             }
++
+             server.server.getPluginManager().callEvent(event);
+-            if (!event.isCancelled() && !event.result().equals(initialResult)) {
++
++            if (!event.isCancelled() && !event.result().equals(PaperAdventure.asAdventure(originalMessage))) {
+                 return PaperAdventure.asVanilla(event.result());
+             }
+-            return PaperAdventure.asVanilla(initialResult);
++
++            return originalMessage;
+         }, server.chatExecutor);
+     }
+ }

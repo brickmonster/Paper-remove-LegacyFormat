@@ -1,0 +1,50 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: brickmonster <92665597+brickmonster@users.noreply.github.com>
+Date: Sun, 14 Apr 2024 00:34:46 +0100
+Subject: [PATCH] adventure: inline constants
+
+
+diff --git a/src/main/java/io/papermc/paper/adventure/ChatDecorationProcessor.java b/src/main/java/io/papermc/paper/adventure/ChatDecorationProcessor.java
+index 62654b6afe8e39311c4d9f17746724d4da964cd9..ab56ef9d2bc657e8a74b9fc6fcef4c91b43fb847 100644
+--- a/src/main/java/io/papermc/paper/adventure/ChatDecorationProcessor.java
++++ b/src/main/java/io/papermc/paper/adventure/ChatDecorationProcessor.java
+@@ -38,7 +38,7 @@ public final class ChatDecorationProcessor {
+ 
+     public CompletableFuture<ChatDecorator.Result> process() {
+         return CompletableFuture.supplyAsync(() -> {
+-            ChatDecorator.Result result = new ChatDecorator.ModernResult(this.originalMessage, true, false);
++            ChatDecorator.Result result = new ChatDecorator.ModernResult(this.originalMessage);
+             return this.processModern(result);
+         }, this.server.chatExecutor);
+     }
+@@ -56,7 +56,7 @@ public final class ChatDecorationProcessor {
+         }
+         this.post(event);
+         if (!event.isCancelled() && !event.result().equals(initialResult)) {
+-            return new ChatDecorator.ModernResult(event.result(), true, false);
++            return new ChatDecorator.ModernResult(event.result());
+         }
+         return input;
+     }
+diff --git a/src/main/java/net/minecraft/network/chat/ChatDecorator.java b/src/main/java/net/minecraft/network/chat/ChatDecorator.java
+index adc77ad288f8695a5f789ac057808eadb8b87c2e..cfc0334be840a0c3e14491b8da947a919b73114a 100644
+--- a/src/main/java/net/minecraft/network/chat/ChatDecorator.java
++++ b/src/main/java/net/minecraft/network/chat/ChatDecorator.java
+@@ -47,11 +47,14 @@ public interface ChatDecorator {
+ 
+     record MessagePair(net.kyori.adventure.text.Component component, String legacyMessage) { }
+ 
+-    record ModernResult(Component component, boolean hasNoFormatting, boolean modernized) implements Result {
+-        public ModernResult(net.kyori.adventure.text.Component component, boolean hasNoFormatting, boolean modernized) {
+-            this(io.papermc.paper.adventure.PaperAdventure.asVanilla(component), hasNoFormatting, modernized);
++    record ModernResult(Component component) implements Result {
++        public ModernResult(net.kyori.adventure.text.Component component) {
++            this(io.papermc.paper.adventure.PaperAdventure.asVanilla(component));
+         }
+ 
++        @Override public boolean hasNoFormatting() { return true; }
++        @Override public boolean modernized() { return false; }
++
+         @Override
+         public MessagePair message() {
+             final net.kyori.adventure.text.Component adventureComponent = io.papermc.paper.adventure.PaperAdventure.WRAPPER_AWARE_SERIALIZER.deserialize(this.component);

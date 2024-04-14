@@ -1,0 +1,37 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: brickmonster <92665597+brickmonster@users.noreply.github.com>
+Date: Sun, 14 Apr 2024 01:36:06 +0100
+Subject: [PATCH] adventure: PlayerChatMessage can now store a component
+ instead of a Result
+
+
+diff --git a/src/main/java/net/minecraft/network/chat/PlayerChatMessage.java b/src/main/java/net/minecraft/network/chat/PlayerChatMessage.java
+index c538e03c5d8e5a4515ae3836d2c9935a6e4ee14f..1d5fe82bed18096eb6e2fb1090a52ac92eb4b801 100644
+--- a/src/main/java/net/minecraft/network/chat/PlayerChatMessage.java
++++ b/src/main/java/net/minecraft/network/chat/PlayerChatMessage.java
+@@ -15,22 +15,18 @@ import net.minecraft.util.SignatureUpdater;
+ import net.minecraft.util.SignatureValidator;
+ 
+ public record PlayerChatMessage(
+-    SignedMessageLink link, @Nullable MessageSignature signature, SignedMessageBody signedBody, @Nullable Component unsignedContent, FilterMask filterMask, @Nullable net.minecraft.network.chat.ChatDecorator.Result result // Paper - adventure; support signed messages
++    SignedMessageLink link, @Nullable MessageSignature signature, SignedMessageBody signedBody, @Nullable Component unsignedContent, FilterMask filterMask, @Nullable net.kyori.adventure.text.Component result // Paper - adventure; support signed messages
+ ) {
+     // Paper start - adventure; support signed messages
+     public PlayerChatMessage(SignedMessageLink link, @Nullable MessageSignature signature, SignedMessageBody signedBody, @Nullable Component unsignedContent, FilterMask filterMask) {
+         this(link, signature, signedBody, unsignedContent, filterMask, null);
+     }
+-    public PlayerChatMessage withResult(net.minecraft.network.chat.ChatDecorator.Result result) {
+-        final PlayerChatMessage msg = this.withUnsignedContent(result.component());
+-        return new PlayerChatMessage(msg.link, msg.signature, msg.signedBody, msg.unsignedContent, msg.filterMask, result);
+-    }
+     public PlayerChatMessage withResult(Component result) {
+         final PlayerChatMessage msg = this.withUnsignedContent(result);
+-        return new PlayerChatMessage(msg.link, msg.signature, msg.signedBody, msg.unsignedContent, msg.filterMask, new net.minecraft.network.chat.ChatDecorator.ModernResult(result));
++        return new PlayerChatMessage(msg.link, msg.signature, msg.signedBody, msg.unsignedContent, msg.filterMask, io.papermc.paper.adventure.PaperAdventure.asAdventure(result));
+     }
+     public net.kyori.adventure.text.Component requireResult() {
+-        return Objects.requireNonNull(this.result, "Requires a decoration result to be set here").message();
++        return Objects.requireNonNull(this.result, "Requires a decoration result to be set here");
+     }
+     public final class AdventureView implements net.kyori.adventure.chat.SignedMessage {
+         private AdventureView() {

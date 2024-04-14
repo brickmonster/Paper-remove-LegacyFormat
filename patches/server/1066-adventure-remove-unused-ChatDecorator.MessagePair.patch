@@ -1,0 +1,58 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: brickmonster <92665597+brickmonster@users.noreply.github.com>
+Date: Sun, 14 Apr 2024 01:11:39 +0100
+Subject: [PATCH] adventure: remove unused ChatDecorator.MessagePair
+
+
+diff --git a/src/main/java/io/papermc/paper/adventure/ChatProcessor.java b/src/main/java/io/papermc/paper/adventure/ChatProcessor.java
+index c50289aae5fbd0767bc7e572d50c144f200b559c..58af5dbe546b96486aea24447a0a7453e684dbeb 100644
+--- a/src/main/java/io/papermc/paper/adventure/ChatProcessor.java
++++ b/src/main/java/io/papermc/paper/adventure/ChatProcessor.java
+@@ -82,7 +82,7 @@ public final class ChatProcessor {
+         Even if the legacy preview event modified the format, and the client signed the formatted message, this should
+         still just be the message component.
+          */
+-        this.paper$originalMessage = this.message.requireResult().message().component();
++        this.paper$originalMessage = this.message.requireResult().message();
+         this.outgoing = OutgoingChatMessage.create(this.message);
+     }
+ 
+@@ -181,7 +181,7 @@ public final class ChatProcessor {
+ 
+     private void readModernModifications(final AbstractChatEvent chatEvent, final ChatRenderer originalRenderer) {
+         if (this.message.unsignedContent() != null) {
+-            this.flags.set(MESSAGE_CHANGED, !chatEvent.message().equals(this.message.requireResult().message().component()));
++            this.flags.set(MESSAGE_CHANGED, !chatEvent.message().equals(this.message.requireResult().message()));
+         } else {
+             this.flags.set(MESSAGE_CHANGED, !chatEvent.message().equals(this.paper$originalMessage));
+         }
+diff --git a/src/main/java/net/minecraft/network/chat/ChatDecorator.java b/src/main/java/net/minecraft/network/chat/ChatDecorator.java
+index 1e87ace3a000b0169c39bf9a6952482bcfa199ad..d26b6c0762efbb77a7d51b31cd99ea3e3c5767ea 100644
+--- a/src/main/java/net/minecraft/network/chat/ChatDecorator.java
++++ b/src/main/java/net/minecraft/network/chat/ChatDecorator.java
+@@ -39,12 +39,9 @@ public interface ChatDecorator {
+         boolean hasNoFormatting();
+ 
+         Component component();
+-
+-        MessagePair message();
++        net.kyori.adventure.text.Component message();
+     }
+ 
+-    record MessagePair(net.kyori.adventure.text.Component component, String legacyMessage) { }
+-
+     record ModernResult(Component component) implements Result {
+         public ModernResult(net.kyori.adventure.text.Component component) {
+             this(io.papermc.paper.adventure.PaperAdventure.asVanilla(component));
+@@ -53,9 +50,9 @@ public interface ChatDecorator {
+         @Override public boolean hasNoFormatting() { return true; }
+ 
+         @Override
+-        public MessagePair message() {
++        public net.kyori.adventure.text.Component message() {
+             final net.kyori.adventure.text.Component adventureComponent = io.papermc.paper.adventure.PaperAdventure.WRAPPER_AWARE_SERIALIZER.deserialize(this.component);
+-            return new MessagePair(adventureComponent, net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().serialize(adventureComponent));
++            return adventureComponent;
+         }
+     }
+     // Paper end - adventure; support async chat decoration events

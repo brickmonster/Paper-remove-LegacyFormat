@@ -1,0 +1,44 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: brickmonster <92665597+brickmonster@users.noreply.github.com>
+Date: Sun, 14 Apr 2024 01:10:37 +0100
+Subject: [PATCH] adventure: remove constant ChatDecorator.modernized
+
+
+diff --git a/src/main/java/io/papermc/paper/adventure/ChatProcessor.java b/src/main/java/io/papermc/paper/adventure/ChatProcessor.java
+index 6736edd898e2f90d7dcc274f07ee1c4f93383c6b..c50289aae5fbd0767bc7e572d50c144f200b559c 100644
+--- a/src/main/java/io/papermc/paper/adventure/ChatProcessor.java
++++ b/src/main/java/io/papermc/paper/adventure/ChatProcessor.java
+@@ -76,11 +76,7 @@ public final class ChatProcessor {
+          */
+         this.message = message;
+         this.async = async;
+-        if (this.message.requireResult().modernized()) {
+-            this.craftbukkit$originalMessage = this.message.requireResult().message().legacyMessage();
+-        } else {
+-            this.craftbukkit$originalMessage = message.signedContent();
+-        }
++        this.craftbukkit$originalMessage = message.signedContent();
+         /*
+         this.paper$originalMessage is the input to paper's chat events. This should be the decorated message component.
+         Even if the legacy preview event modified the format, and the client signed the formatted message, this should
+diff --git a/src/main/java/net/minecraft/network/chat/ChatDecorator.java b/src/main/java/net/minecraft/network/chat/ChatDecorator.java
+index cfc0334be840a0c3e14491b8da947a919b73114a..1e87ace3a000b0169c39bf9a6952482bcfa199ad 100644
+--- a/src/main/java/net/minecraft/network/chat/ChatDecorator.java
++++ b/src/main/java/net/minecraft/network/chat/ChatDecorator.java
+@@ -41,8 +41,6 @@ public interface ChatDecorator {
+         Component component();
+ 
+         MessagePair message();
+-
+-        boolean modernized();
+     }
+ 
+     record MessagePair(net.kyori.adventure.text.Component component, String legacyMessage) { }
+@@ -53,7 +51,6 @@ public interface ChatDecorator {
+         }
+ 
+         @Override public boolean hasNoFormatting() { return true; }
+-        @Override public boolean modernized() { return false; }
+ 
+         @Override
+         public MessagePair message() {

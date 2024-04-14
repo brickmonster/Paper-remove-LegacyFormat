@@ -1,0 +1,34 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: brickmonster <92665597+brickmonster@users.noreply.github.com>
+Date: Sun, 14 Apr 2024 01:30:51 +0100
+Subject: [PATCH] adventure: add ChatDecorator.decorateComponent
+
+
+diff --git a/src/main/java/net/minecraft/network/chat/ChatDecorator.java b/src/main/java/net/minecraft/network/chat/ChatDecorator.java
+index d26b6c0762efbb77a7d51b31cd99ea3e3c5767ea..46ea3bc81c92b84da186ff84849536e649fa6445 100644
+--- a/src/main/java/net/minecraft/network/chat/ChatDecorator.java
++++ b/src/main/java/net/minecraft/network/chat/ChatDecorator.java
+@@ -16,6 +16,10 @@ public interface ChatDecorator {
+         throw new UnsupportedOperationException("Must override this implementation");
+     }
+ 
++    default CompletableFuture<Component> decorateComponent(@Nullable ServerPlayer sender, @Nullable net.minecraft.commands.CommandSourceStack commandSourceStack, Component message) {
++        throw new UnsupportedOperationException("Must override this implementation");
++    }
++
+     static ChatDecorator create(ImprovedChatDecorator delegate) {
+         return new ChatDecorator() {
+             @Override
+diff --git a/src/main/java/net/minecraft/server/network/ServerGamePacketListenerImpl.java b/src/main/java/net/minecraft/server/network/ServerGamePacketListenerImpl.java
+index 860d33ac56680babd87358b1d7d2216dac3f7865..6c7cbc764289a0180e270774fc0c54a753c395a4 100644
+--- a/src/main/java/net/minecraft/server/network/ServerGamePacketListenerImpl.java
++++ b/src/main/java/net/minecraft/server/network/ServerGamePacketListenerImpl.java
+@@ -2159,7 +2159,7 @@ public class ServerGamePacketListenerImpl extends ServerCommonPacketListenerImpl
+                     }
+ 
+                     CompletableFuture<FilteredText> completablefuture = this.filterTextPacket(playerchatmessage.signedContent()).thenApplyAsync(Function.identity(), this.server.chatExecutor); // CraftBukkit - async chat
+-                    CompletableFuture<ChatDecorator.Result> componentFuture = this.server.getChatDecorator().decorate(this.player, null, playerchatmessage.decoratedContent()); // Paper
++                    CompletableFuture<Component> componentFuture = this.server.getChatDecorator().decorateComponent(this.player, null, playerchatmessage.decoratedContent()); // Paper
+ 
+                     this.chatMessageChain.append(CompletableFuture.allOf(completablefuture, componentFuture), (filteredtext) -> {
+                         PlayerChatMessage playerchatmessage1 = playerchatmessage.filter(completablefuture.join().mask()).withResult(componentFuture.join()); // Paper

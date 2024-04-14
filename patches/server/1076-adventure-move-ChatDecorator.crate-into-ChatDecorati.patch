@@ -1,0 +1,89 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: brickmonster <92665597+brickmonster@users.noreply.github.com>
+Date: Sun, 14 Apr 2024 02:06:22 +0100
+Subject: [PATCH] adventure: move ChatDecorator.crate into
+ ChatDecorationProcessor
+
+
+diff --git a/src/main/java/io/papermc/paper/adventure/ChatDecorationProcessor.java b/src/main/java/io/papermc/paper/adventure/ChatDecorationProcessor.java
+index 1a29a22ca12e85dc17a6def2277d4ab36df055c1..fe37e4342d832d5ba98325fa9942d0fc66b53963 100644
+--- a/src/main/java/io/papermc/paper/adventure/ChatDecorationProcessor.java
++++ b/src/main/java/io/papermc/paper/adventure/ChatDecorationProcessor.java
+@@ -2,19 +2,35 @@ package io.papermc.paper.adventure;
+ 
+ import io.papermc.paper.event.player.AsyncChatCommandDecorateEvent;
+ import io.papermc.paper.event.player.AsyncChatDecorateEvent;
+-import java.util.concurrent.CompletableFuture;
+ import net.kyori.adventure.text.Component;
+ import net.minecraft.commands.CommandSourceStack;
++import net.minecraft.network.chat.ChatDecorator;
+ import net.minecraft.server.MinecraftServer;
+ import net.minecraft.server.level.ServerPlayer;
+ import org.bukkit.craftbukkit.entity.CraftPlayer;
+ import org.checkerframework.checker.nullness.qual.NonNull;
+-import org.checkerframework.checker.nullness.qual.Nullable;
+ import org.checkerframework.framework.qual.DefaultQualifier;
+ 
++import javax.annotation.Nullable;
++import java.util.concurrent.CompletableFuture;
++
+ @DefaultQualifier(NonNull.class)
+ public final class ChatDecorationProcessor {
+-    public static CompletableFuture<net.minecraft.network.chat.Component> process(final MinecraftServer server, final @Nullable ServerPlayer player, final @Nullable CommandSourceStack commandSourceStack, final net.minecraft.network.chat.Component originalMessageVanilla) {
++    public static ChatDecorator create(net.minecraft.server.MinecraftServer server) {
++        return new ChatDecorator() {
++            @Override
++            public CompletableFuture<net.minecraft.network.chat.Component> decorate(@Nullable ServerPlayer sender, net.minecraft.network.chat.Component message) {
++                return process(server, sender, null, message);
++            }
++
++            @Override
++            public CompletableFuture<net.minecraft.network.chat.Component> decorate(@Nullable ServerPlayer sender, @Nullable CommandSourceStack commandSourceStack, net.minecraft.network.chat.Component message) {
++                return process(server, sender, commandSourceStack, message);
++            }
++        };
++    }
++
++    private static CompletableFuture<net.minecraft.network.chat.Component> process(final MinecraftServer server, final @Nullable ServerPlayer player, final @Nullable CommandSourceStack commandSourceStack, final net.minecraft.network.chat.Component originalMessageVanilla) {
+         return CompletableFuture.supplyAsync(() -> {
+             final Component originalMessage = PaperAdventure.asAdventure(originalMessageVanilla);
+             final Component initialResult = PaperAdventure.WRAPPER_AWARE_SERIALIZER.deserialize(PaperAdventure.asVanilla(originalMessage));
+diff --git a/src/main/java/net/minecraft/network/chat/ChatDecorator.java b/src/main/java/net/minecraft/network/chat/ChatDecorator.java
+index 253805effe20120ec3f294ff9f8b13b5d63818ec..6b8dc1eb490098cc14673c9ab0aa16fe3471325b 100644
+--- a/src/main/java/net/minecraft/network/chat/ChatDecorator.java
++++ b/src/main/java/net/minecraft/network/chat/ChatDecorator.java
+@@ -15,19 +15,5 @@ public interface ChatDecorator {
+     default CompletableFuture<Component> decorate(@Nullable ServerPlayer sender, @Nullable net.minecraft.commands.CommandSourceStack commandSourceStack, Component message) {
+         throw new UnsupportedOperationException("Must override this implementation");
+     }
+-
+-    static ChatDecorator create(net.minecraft.server.MinecraftServer server) {
+-        return new ChatDecorator() {
+-            @Override
+-            public CompletableFuture<Component> decorate(@Nullable ServerPlayer sender, Component message) {
+-                return io.papermc.paper.adventure.ChatDecorationProcessor.process(server, sender, null, message);
+-            }
+-
+-            @Override
+-            public CompletableFuture<Component> decorate(@Nullable ServerPlayer sender, @Nullable net.minecraft.commands.CommandSourceStack commandSourceStack, Component message) {
+-                return io.papermc.paper.adventure.ChatDecorationProcessor.process(server, sender, commandSourceStack, message);
+-            }
+-        };
+-    }
+     // Paper end - adventure; support async chat decoration events
+ }
+diff --git a/src/main/java/net/minecraft/server/MinecraftServer.java b/src/main/java/net/minecraft/server/MinecraftServer.java
+index 8833b9550768f6eb1ad3d3b00a2c834ba6207732..b1e8d8cf1da299e129d83068e71a8df11e17127b 100644
+--- a/src/main/java/net/minecraft/server/MinecraftServer.java
++++ b/src/main/java/net/minecraft/server/MinecraftServer.java
+@@ -2824,8 +2824,8 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
+             new com.google.common.util.concurrent.ThreadFactoryBuilder().setDaemon(true).setNameFormat("Async Chat Thread - #%d").setUncaughtExceptionHandler(new net.minecraft.DefaultUncaughtExceptionHandlerWithName(net.minecraft.server.MinecraftServer.LOGGER)).build()); // Paper
+ 
+     public ChatDecorator getChatDecorator() {
+-        // Paper start - moved to ChatPreviewProcessor
+-        return ChatDecorator.create(this);
++        // Paper start - support async chat decoration events
++        return io.papermc.paper.adventure.ChatDecorationProcessor.create(this);
+         // Paper end
+     }
+ 

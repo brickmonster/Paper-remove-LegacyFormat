@@ -1,0 +1,53 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: brickmonster <92665597+brickmonster@users.noreply.github.com>
+Date: Sun, 14 Apr 2024 01:43:10 +0100
+Subject: [PATCH] adventure: remove unnecessary ImproveChatDecorator
+ indirection
+
+
+diff --git a/src/main/java/net/minecraft/network/chat/ChatDecorator.java b/src/main/java/net/minecraft/network/chat/ChatDecorator.java
+index 46ea3bc81c92b84da186ff84849536e649fa6445..59d2bfc9184cbba3ba587e2e50464e7e5db34862 100644
+--- a/src/main/java/net/minecraft/network/chat/ChatDecorator.java
++++ b/src/main/java/net/minecraft/network/chat/ChatDecorator.java
+@@ -20,7 +20,7 @@ public interface ChatDecorator {
+         throw new UnsupportedOperationException("Must override this implementation");
+     }
+ 
+-    static ChatDecorator create(ImprovedChatDecorator delegate) {
++    static ChatDecorator create(net.minecraft.server.MinecraftServer server) {
+         return new ChatDecorator() {
+             @Override
+             public CompletableFuture<Component> decorate(@Nullable ServerPlayer sender, Component message) {
+@@ -29,16 +29,11 @@ public interface ChatDecorator {
+ 
+             @Override
+             public CompletableFuture<Result> decorate(@Nullable ServerPlayer sender, @Nullable net.minecraft.commands.CommandSourceStack commandSourceStack, Component message) {
+-                return delegate.decorate(sender, commandSourceStack, message);
++                return io.papermc.paper.adventure.ChatDecorationProcessor.process(server, sender, commandSourceStack, message);
+             }
+         };
+     }
+ 
+-    @FunctionalInterface
+-    interface ImprovedChatDecorator {
+-        CompletableFuture<Result> decorate(@Nullable ServerPlayer sender, @Nullable net.minecraft.commands.CommandSourceStack commandSourceStack, Component message);
+-    }
+-
+     interface Result {
+         boolean hasNoFormatting();
+ 
+diff --git a/src/main/java/net/minecraft/server/MinecraftServer.java b/src/main/java/net/minecraft/server/MinecraftServer.java
+index a3d0e9e5ca7f3fb521c8427930a99647c6662a38..8833b9550768f6eb1ad3d3b00a2c834ba6207732 100644
+--- a/src/main/java/net/minecraft/server/MinecraftServer.java
++++ b/src/main/java/net/minecraft/server/MinecraftServer.java
+@@ -2825,9 +2825,7 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
+ 
+     public ChatDecorator getChatDecorator() {
+         // Paper start - moved to ChatPreviewProcessor
+-        return ChatDecorator.create((sender, commandSourceStack, message) -> {
+-            return io.papermc.paper.adventure.ChatDecorationProcessor.process(this, sender, commandSourceStack, message);
+-        });
++        return ChatDecorator.create(this);
+         // Paper end
+     }
+ 

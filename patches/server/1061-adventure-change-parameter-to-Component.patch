@@ -1,0 +1,37 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: brickmonster <92665597+brickmonster@users.noreply.github.com>
+Date: Sun, 14 Apr 2024 00:37:35 +0100
+Subject: [PATCH] adventure: change parameter to Component
+
+
+diff --git a/src/main/java/io/papermc/paper/adventure/ChatDecorationProcessor.java b/src/main/java/io/papermc/paper/adventure/ChatDecorationProcessor.java
+index ab56ef9d2bc657e8a74b9fc6fcef4c91b43fb847..3fc1ea5185cc3c232b21eb113048599cfb3ccaa6 100644
+--- a/src/main/java/io/papermc/paper/adventure/ChatDecorationProcessor.java
++++ b/src/main/java/io/papermc/paper/adventure/ChatDecorationProcessor.java
+@@ -38,15 +38,14 @@ public final class ChatDecorationProcessor {
+ 
+     public CompletableFuture<ChatDecorator.Result> process() {
+         return CompletableFuture.supplyAsync(() -> {
+-            ChatDecorator.Result result = new ChatDecorator.ModernResult(this.originalMessage);
++            Component result = io.papermc.paper.adventure.PaperAdventure.WRAPPER_AWARE_SERIALIZER.deserialize(io.papermc.paper.adventure.PaperAdventure.asVanilla(this.originalMessage));
+             return this.processModern(result);
+         }, this.server.chatExecutor);
+     }
+ 
+-    private ChatDecorator.Result processModern(final ChatDecorator.Result input) {
++    private ChatDecorator.Result processModern(final Component initialResult) {
+         final @Nullable CraftPlayer player = Optionull.map(this.player, ServerPlayer::getBukkitEntity);
+ 
+-        final Component initialResult = input.message().component();
+         final AsyncChatDecorateEvent event;
+         if (this.commandSourceStack != null) {
+             // TODO more command decorate context
+@@ -58,7 +57,7 @@ public final class ChatDecorationProcessor {
+         if (!event.isCancelled() && !event.result().equals(initialResult)) {
+             return new ChatDecorator.ModernResult(event.result());
+         }
+-        return input;
++        return new ChatDecorator.ModernResult(initialResult);
+     }
+ 
+     private void post(final Event event) {

@@ -1,0 +1,103 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: brickmonster <92665597+brickmonster@users.noreply.github.com>
+Date: Sun, 14 Apr 2024 01:54:30 +0100
+Subject: [PATCH] adventure: return Component instead of Result from
+ ChatDecorationProcessor
+
+
+diff --git a/src/main/java/io/papermc/paper/adventure/ChatDecorationProcessor.java b/src/main/java/io/papermc/paper/adventure/ChatDecorationProcessor.java
+index 8f47301c2c2e51bab69c4fffd564a3a9bf292aca..50716510c88dd91ca62336dfb0fb292f95239950 100644
+--- a/src/main/java/io/papermc/paper/adventure/ChatDecorationProcessor.java
++++ b/src/main/java/io/papermc/paper/adventure/ChatDecorationProcessor.java
+@@ -15,7 +15,7 @@ import org.checkerframework.framework.qual.DefaultQualifier;
+ 
+ @DefaultQualifier(NonNull.class)
+ public final class ChatDecorationProcessor {
+-    public static CompletableFuture<ChatDecorator.Result> process(final MinecraftServer server, final @Nullable ServerPlayer player, final @Nullable CommandSourceStack commandSourceStack, final net.minecraft.network.chat.Component originalMessageVanilla) {
++    public static CompletableFuture<net.minecraft.network.chat.Component> process(final MinecraftServer server, final @Nullable ServerPlayer player, final @Nullable CommandSourceStack commandSourceStack, final net.minecraft.network.chat.Component originalMessageVanilla) {
+         return CompletableFuture.supplyAsync(() -> {
+             final Component originalMessage = PaperAdventure.asAdventure(originalMessageVanilla);
+             final Component initialResult = PaperAdventure.WRAPPER_AWARE_SERIALIZER.deserialize(PaperAdventure.asVanilla(originalMessage));
+@@ -30,9 +30,9 @@ public final class ChatDecorationProcessor {
+             }
+             server.server.getPluginManager().callEvent(event);
+             if (!event.isCancelled() && !event.result().equals(initialResult)) {
+-                return new ChatDecorator.ModernResult(event.result());
++                return new ChatDecorator.ModernResult(event.result()).component();
+             }
+-            return new ChatDecorator.ModernResult(initialResult);
++            return new ChatDecorator.ModernResult(initialResult).component();
+         }, server.chatExecutor);
+     }
+ }
+diff --git a/src/main/java/net/minecraft/commands/arguments/MessageArgument.java b/src/main/java/net/minecraft/commands/arguments/MessageArgument.java
+index 43a47a6d8e5043ef743c5c2d8fb802d8ba3cb8ec..23f6b833e71002c648e20744ed0beb344efbe8b9 100644
+--- a/src/main/java/net/minecraft/commands/arguments/MessageArgument.java
++++ b/src/main/java/net/minecraft/commands/arguments/MessageArgument.java
+@@ -51,9 +51,9 @@ public class MessageArgument implements SignedArgument<MessageArgument.Message>
+         MinecraftServer minecraftServer = source.getServer();
+         CompletableFuture<FilteredText> completableFuture = filterPlainText(source, message);
+         // Paper start - support asynchronous chat decoration
+-        CompletableFuture<ChatDecorator.Result> componentFuture = minecraftServer.getChatDecorator().decorate(source.getPlayer(), source, message.decoratedContent());
++        CompletableFuture<Component> componentFuture = minecraftServer.getChatDecorator().decorate(source.getPlayer(), source, message.decoratedContent());
+         source.getChatMessageChainer().append(CompletableFuture.allOf(completableFuture, componentFuture), filtered -> {
+-            PlayerChatMessage playerChatMessage2 = message.withUnsignedContent(componentFuture.join().component()).filter(completableFuture.join().mask());
++            PlayerChatMessage playerChatMessage2 = message.withUnsignedContent(componentFuture.join()).filter(completableFuture.join().mask());
+             // Paper end - support asynchronous chat decoration
+             callback.accept(playerChatMessage2);
+         });
+@@ -62,8 +62,8 @@ public class MessageArgument implements SignedArgument<MessageArgument.Message>
+     private static void resolveDisguisedMessage(Consumer<PlayerChatMessage> callback, CommandSourceStack source, PlayerChatMessage message) {
+         ChatDecorator chatDecorator = source.getServer().getChatDecorator();
+         // Paper start - support asynchronous chat decoration
+-        CompletableFuture<ChatDecorator.Result> componentFuture = chatDecorator.decorate(source.getPlayer(), source, message.decoratedContent());
+-        source.getChatMessageChainer().append(componentFuture, (result) -> callback.accept(message.withUnsignedContent(result.component())));
++        CompletableFuture<Component> componentFuture = chatDecorator.decorate(source.getPlayer(), source, message.decoratedContent());
++        source.getChatMessageChainer().append(componentFuture, (result) -> callback.accept(message.withUnsignedContent(result)));
+         // Paper end - support asynchronous chat decoration
+     }
+ 
+diff --git a/src/main/java/net/minecraft/network/chat/ChatDecorator.java b/src/main/java/net/minecraft/network/chat/ChatDecorator.java
+index 59d2bfc9184cbba3ba587e2e50464e7e5db34862..90df2a7976bbb78fec21542e763c4d56008fb7c7 100644
+--- a/src/main/java/net/minecraft/network/chat/ChatDecorator.java
++++ b/src/main/java/net/minecraft/network/chat/ChatDecorator.java
+@@ -12,11 +12,7 @@ public interface ChatDecorator {
+     CompletableFuture<Component> decorate(@Nullable ServerPlayer sender, Component message); // Paper - adventure; support async chat decoration events
+ 
+     // Paper start - adventure; support async chat decoration events
+-    default CompletableFuture<Result> decorate(@Nullable ServerPlayer sender, @Nullable net.minecraft.commands.CommandSourceStack commandSourceStack, Component message) {
+-        throw new UnsupportedOperationException("Must override this implementation");
+-    }
+-
+-    default CompletableFuture<Component> decorateComponent(@Nullable ServerPlayer sender, @Nullable net.minecraft.commands.CommandSourceStack commandSourceStack, Component message) {
++    default CompletableFuture<Component> decorate(@Nullable ServerPlayer sender, @Nullable net.minecraft.commands.CommandSourceStack commandSourceStack, Component message) {
+         throw new UnsupportedOperationException("Must override this implementation");
+     }
+ 
+@@ -24,11 +20,11 @@ public interface ChatDecorator {
+         return new ChatDecorator() {
+             @Override
+             public CompletableFuture<Component> decorate(@Nullable ServerPlayer sender, Component message) {
+-                return this.decorate(sender, null, message).thenApply(Result::component);
++                return io.papermc.paper.adventure.ChatDecorationProcessor.process(server, sender, null, message);
+             }
+ 
+             @Override
+-            public CompletableFuture<Result> decorate(@Nullable ServerPlayer sender, @Nullable net.minecraft.commands.CommandSourceStack commandSourceStack, Component message) {
++            public CompletableFuture<Component> decorate(@Nullable ServerPlayer sender, @Nullable net.minecraft.commands.CommandSourceStack commandSourceStack, Component message) {
+                 return io.papermc.paper.adventure.ChatDecorationProcessor.process(server, sender, commandSourceStack, message);
+             }
+         };
+diff --git a/src/main/java/net/minecraft/server/network/ServerGamePacketListenerImpl.java b/src/main/java/net/minecraft/server/network/ServerGamePacketListenerImpl.java
+index 6c7cbc764289a0180e270774fc0c54a753c395a4..bcaf4e3470da740782352c9bba6518067839bd13 100644
+--- a/src/main/java/net/minecraft/server/network/ServerGamePacketListenerImpl.java
++++ b/src/main/java/net/minecraft/server/network/ServerGamePacketListenerImpl.java
+@@ -2159,7 +2159,7 @@ public class ServerGamePacketListenerImpl extends ServerCommonPacketListenerImpl
+                     }
+ 
+                     CompletableFuture<FilteredText> completablefuture = this.filterTextPacket(playerchatmessage.signedContent()).thenApplyAsync(Function.identity(), this.server.chatExecutor); // CraftBukkit - async chat
+-                    CompletableFuture<Component> componentFuture = this.server.getChatDecorator().decorateComponent(this.player, null, playerchatmessage.decoratedContent()); // Paper
++                    CompletableFuture<Component> componentFuture = this.server.getChatDecorator().decorate(this.player, null, playerchatmessage.decoratedContent()); // Paper
+ 
+                     this.chatMessageChain.append(CompletableFuture.allOf(completablefuture, componentFuture), (filteredtext) -> {
+                         PlayerChatMessage playerchatmessage1 = playerchatmessage.filter(completablefuture.join().mask()).withResult(componentFuture.join()); // Paper

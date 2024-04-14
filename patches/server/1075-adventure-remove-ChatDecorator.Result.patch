@@ -1,0 +1,73 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: brickmonster <92665597+brickmonster@users.noreply.github.com>
+Date: Sun, 14 Apr 2024 01:59:07 +0100
+Subject: [PATCH] adventure: remove ChatDecorator.Result
+
+
+diff --git a/src/main/java/io/papermc/paper/adventure/ChatDecorationProcessor.java b/src/main/java/io/papermc/paper/adventure/ChatDecorationProcessor.java
+index 50716510c88dd91ca62336dfb0fb292f95239950..1a29a22ca12e85dc17a6def2277d4ab36df055c1 100644
+--- a/src/main/java/io/papermc/paper/adventure/ChatDecorationProcessor.java
++++ b/src/main/java/io/papermc/paper/adventure/ChatDecorationProcessor.java
+@@ -5,7 +5,6 @@ import io.papermc.paper.event.player.AsyncChatDecorateEvent;
+ import java.util.concurrent.CompletableFuture;
+ import net.kyori.adventure.text.Component;
+ import net.minecraft.commands.CommandSourceStack;
+-import net.minecraft.network.chat.ChatDecorator;
+ import net.minecraft.server.MinecraftServer;
+ import net.minecraft.server.level.ServerPlayer;
+ import org.bukkit.craftbukkit.entity.CraftPlayer;
+@@ -30,9 +29,9 @@ public final class ChatDecorationProcessor {
+             }
+             server.server.getPluginManager().callEvent(event);
+             if (!event.isCancelled() && !event.result().equals(initialResult)) {
+-                return new ChatDecorator.ModernResult(event.result()).component();
++                return PaperAdventure.asVanilla(event.result());
+             }
+-            return new ChatDecorator.ModernResult(initialResult).component();
++            return PaperAdventure.asVanilla(initialResult);
+         }, server.chatExecutor);
+     }
+ }
+diff --git a/src/main/java/net/minecraft/network/chat/ChatDecorator.java b/src/main/java/net/minecraft/network/chat/ChatDecorator.java
+index 90df2a7976bbb78fec21542e763c4d56008fb7c7..253805effe20120ec3f294ff9f8b13b5d63818ec 100644
+--- a/src/main/java/net/minecraft/network/chat/ChatDecorator.java
++++ b/src/main/java/net/minecraft/network/chat/ChatDecorator.java
+@@ -6,9 +6,9 @@ import java.util.concurrent.CompletableFuture; // Paper
+ 
+ @FunctionalInterface
+ public interface ChatDecorator {
+-    ChatDecorator PLAIN = (sender, message) -> CompletableFuture.completedFuture(message); // Paper - adventure; support async chat decoration events;
++    ChatDecorator PLAIN = (sender, message) -> CompletableFuture.completedFuture(message); // Paper - adventure; support async chat decoration events
+ 
+-    @io.papermc.paper.annotation.DoNotUse @Deprecated // Paper - adventure; support chat decoration events
++    @io.papermc.paper.annotation.DoNotUse @Deprecated // Paper - adventure; support chat decoration events (callers should use the overload with CommandSourceStack)
+     CompletableFuture<Component> decorate(@Nullable ServerPlayer sender, Component message); // Paper - adventure; support async chat decoration events
+ 
+     // Paper start - adventure; support async chat decoration events
+@@ -29,26 +29,5 @@ public interface ChatDecorator {
+             }
+         };
+     }
+-
+-    interface Result {
+-        boolean hasNoFormatting();
+-
+-        Component component();
+-        net.kyori.adventure.text.Component message();
+-    }
+-
+-    record ModernResult(Component component) implements Result {
+-        public ModernResult(net.kyori.adventure.text.Component component) {
+-            this(io.papermc.paper.adventure.PaperAdventure.asVanilla(component));
+-        }
+-
+-        @Override public boolean hasNoFormatting() { return true; }
+-
+-        @Override
+-        public net.kyori.adventure.text.Component message() {
+-            final net.kyori.adventure.text.Component adventureComponent = io.papermc.paper.adventure.PaperAdventure.WRAPPER_AWARE_SERIALIZER.deserialize(this.component);
+-            return adventureComponent;
+-        }
+-    }
+     // Paper end - adventure; support async chat decoration events
+ }

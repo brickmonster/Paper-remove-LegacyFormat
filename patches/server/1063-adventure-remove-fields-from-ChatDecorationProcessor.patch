@@ -1,0 +1,81 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: brickmonster <92665597+brickmonster@users.noreply.github.com>
+Date: Sun, 14 Apr 2024 00:51:17 +0100
+Subject: [PATCH] adventure: remove fields from ChatDecorationProcessor
+
+
+diff --git a/src/main/java/io/papermc/paper/adventure/ChatDecorationProcessor.java b/src/main/java/io/papermc/paper/adventure/ChatDecorationProcessor.java
+index d42b08d72269bbc68c0c920100047a193f3d7609..c3ef0238870b46f9a343d7835bd94f0c5e853dc7 100644
+--- a/src/main/java/io/papermc/paper/adventure/ChatDecorationProcessor.java
++++ b/src/main/java/io/papermc/paper/adventure/ChatDecorationProcessor.java
+@@ -11,7 +11,6 @@ import net.minecraft.network.chat.ChatDecorator;
+ import net.minecraft.server.MinecraftServer;
+ import net.minecraft.server.level.ServerPlayer;
+ import org.bukkit.craftbukkit.entity.CraftPlayer;
+-import org.bukkit.event.Event;
+ import org.checkerframework.checker.nullness.qual.NonNull;
+ import org.checkerframework.checker.nullness.qual.Nullable;
+ import org.checkerframework.framework.qual.DefaultQualifier;
+@@ -24,48 +23,33 @@ public final class ChatDecorationProcessor {
+     private static final String CONTENT_TAG = "---paper_content---";
+     private static final Pattern CONTENT_PATTERN = Pattern.compile("%(2\\$)?s");
+ 
+-    final MinecraftServer server;
+-    final @Nullable ServerPlayer player;
+-    final @Nullable CommandSourceStack commandSourceStack;
+-    final Component originalMessage;
+-
+-    private ChatDecorationProcessor(final MinecraftServer server, final @Nullable ServerPlayer player, final @Nullable CommandSourceStack commandSourceStack, final net.minecraft.network.chat.Component originalMessage) {
+-        this.server = server;
+-        this.player = player;
+-        this.commandSourceStack = commandSourceStack;
+-        this.originalMessage = PaperAdventure.asAdventure(originalMessage);
+-    }
+-
+-    public static CompletableFuture<ChatDecorator.Result> process(final MinecraftServer server, final @Nullable ServerPlayer player, final @Nullable CommandSourceStack commandSourceStack, final net.minecraft.network.chat.Component originalMessage) {
+-        final io.papermc.paper.adventure.ChatDecorationProcessor processor = new io.papermc.paper.adventure.ChatDecorationProcessor(server, player, commandSourceStack, originalMessage);
+-        return processor.process();
++    public static CompletableFuture<ChatDecorator.Result> process(final MinecraftServer server, final @Nullable ServerPlayer player, final @Nullable CommandSourceStack commandSourceStack, final net.minecraft.network.chat.Component originalMessageVanilla) {
++        final Component originalMessage = PaperAdventure.asAdventure(originalMessageVanilla);
++        final io.papermc.paper.adventure.ChatDecorationProcessor processor = new io.papermc.paper.adventure.ChatDecorationProcessor();
++        return processor.process2(server, player, commandSourceStack, originalMessage);
+     }
+ 
+-    public CompletableFuture<ChatDecorator.Result> process() {
++    public CompletableFuture<ChatDecorator.Result> process2(final MinecraftServer server, final @Nullable ServerPlayer player, final @Nullable CommandSourceStack commandSourceStack, final Component originalMessage) {
+         return CompletableFuture.supplyAsync(() -> {
+-            Component result = io.papermc.paper.adventure.PaperAdventure.WRAPPER_AWARE_SERIALIZER.deserialize(io.papermc.paper.adventure.PaperAdventure.asVanilla(this.originalMessage));
+-            return this.processModern(result);
+-        }, this.server.chatExecutor);
++            Component result = PaperAdventure.WRAPPER_AWARE_SERIALIZER.deserialize(PaperAdventure.asVanilla(originalMessage));
++            return this.processModern(server, player, commandSourceStack, originalMessage, result);
++        }, server.chatExecutor);
+     }
+ 
+-    private ChatDecorator.Result processModern(final Component initialResult) {
+-        final @Nullable CraftPlayer player = Optionull.map(this.player, ServerPlayer::getBukkitEntity);
++    private ChatDecorator.Result processModern(final MinecraftServer server, final @Nullable ServerPlayer player, final @Nullable CommandSourceStack commandSourceStack, final Component originalMessage, final Component initialResult) {
++        final @Nullable CraftPlayer craftPlayer = Optionull.map(player, ServerPlayer::getBukkitEntity);
+ 
+         final AsyncChatDecorateEvent event;
+-        if (this.commandSourceStack != null) {
++        if (commandSourceStack != null) {
+             // TODO more command decorate context
+-            event = new AsyncChatCommandDecorateEvent(true, player, this.originalMessage, initialResult);
++            event = new AsyncChatCommandDecorateEvent(true, craftPlayer, originalMessage, initialResult);
+         } else {
+-            event = new AsyncChatDecorateEvent(true, player, this.originalMessage, initialResult);
++            event = new AsyncChatDecorateEvent(true, craftPlayer, originalMessage, initialResult);
+         }
+-        this.post(event);
++        server.server.getPluginManager().callEvent(event);
+         if (!event.isCancelled() && !event.result().equals(initialResult)) {
+             return new ChatDecorator.ModernResult(event.result());
+         }
+         return new ChatDecorator.ModernResult(initialResult);
+     }
+-
+-    private void post(final Event event) {
+-        this.server.server.getPluginManager().callEvent(event);
+-    }
+ }

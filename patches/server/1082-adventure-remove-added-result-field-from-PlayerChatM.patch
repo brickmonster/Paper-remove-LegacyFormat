@@ -1,0 +1,67 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: brickmonster <92665597+brickmonster@users.noreply.github.com>
+Date: Sun, 14 Apr 2024 04:53:42 +0100
+Subject: [PATCH] adventure: remove added result field from
+ PlayerChatMessage,it's always the same as unsignedContent
+
+
+diff --git a/src/main/java/io/papermc/paper/adventure/ChatProcessor.java b/src/main/java/io/papermc/paper/adventure/ChatProcessor.java
+index 03cc762cf9684bf56037b8755c7a3b2c1d10f94e..7fc55811ee01570e4c5eea0bc7dc8c7a1c7a26f7 100644
+--- a/src/main/java/io/papermc/paper/adventure/ChatProcessor.java
++++ b/src/main/java/io/papermc/paper/adventure/ChatProcessor.java
+@@ -82,7 +82,7 @@ public final class ChatProcessor {
+         Even if the legacy preview event modified the format, and the client signed the formatted message, this should
+         still just be the message component.
+          */
+-        this.paper$originalMessage = this.message.requireResult();
++        this.paper$originalMessage = PaperAdventure.asAdventure(this.message.unsignedContent());
+         this.outgoing = OutgoingChatMessage.create(this.message);
+     }
+ 
+@@ -181,7 +181,7 @@ public final class ChatProcessor {
+ 
+     private void readModernModifications(final AbstractChatEvent chatEvent, final ChatRenderer originalRenderer) {
+         if (this.message.unsignedContent() != null) {
+-            this.flags.set(MESSAGE_CHANGED, !chatEvent.message().equals(this.message.requireResult()));
++            this.flags.set(MESSAGE_CHANGED, !chatEvent.message().equals(this.message.unsignedContent()));
+         } else {
+             this.flags.set(MESSAGE_CHANGED, !chatEvent.message().equals(this.paper$originalMessage));
+         }
+diff --git a/src/main/java/net/minecraft/network/chat/PlayerChatMessage.java b/src/main/java/net/minecraft/network/chat/PlayerChatMessage.java
+index 1d5fe82bed18096eb6e2fb1090a52ac92eb4b801..a08b23afc3f3c2df5be6338776c3bc7679a0a685 100644
+--- a/src/main/java/net/minecraft/network/chat/PlayerChatMessage.java
++++ b/src/main/java/net/minecraft/network/chat/PlayerChatMessage.java
+@@ -15,19 +15,9 @@ import net.minecraft.util.SignatureUpdater;
+ import net.minecraft.util.SignatureValidator;
+ 
+ public record PlayerChatMessage(
+-    SignedMessageLink link, @Nullable MessageSignature signature, SignedMessageBody signedBody, @Nullable Component unsignedContent, FilterMask filterMask, @Nullable net.kyori.adventure.text.Component result // Paper - adventure; support signed messages
++    SignedMessageLink link, @Nullable MessageSignature signature, SignedMessageBody signedBody, @Nullable Component unsignedContent, FilterMask filterMask
+ ) {
+     // Paper start - adventure; support signed messages
+-    public PlayerChatMessage(SignedMessageLink link, @Nullable MessageSignature signature, SignedMessageBody signedBody, @Nullable Component unsignedContent, FilterMask filterMask) {
+-        this(link, signature, signedBody, unsignedContent, filterMask, null);
+-    }
+-    public PlayerChatMessage withResult(Component result) {
+-        final PlayerChatMessage msg = this.withUnsignedContent(result);
+-        return new PlayerChatMessage(msg.link, msg.signature, msg.signedBody, msg.unsignedContent, msg.filterMask, io.papermc.paper.adventure.PaperAdventure.asAdventure(result));
+-    }
+-    public net.kyori.adventure.text.Component requireResult() {
+-        return Objects.requireNonNull(this.result, "Requires a decoration result to be set here");
+-    }
+     public final class AdventureView implements net.kyori.adventure.chat.SignedMessage {
+         private AdventureView() {
+         }
+diff --git a/src/main/java/net/minecraft/server/network/ServerGamePacketListenerImpl.java b/src/main/java/net/minecraft/server/network/ServerGamePacketListenerImpl.java
+index bcaf4e3470da740782352c9bba6518067839bd13..0bca3bd7364b239e52646d41bbcf7ec85687879c 100644
+--- a/src/main/java/net/minecraft/server/network/ServerGamePacketListenerImpl.java
++++ b/src/main/java/net/minecraft/server/network/ServerGamePacketListenerImpl.java
+@@ -2162,7 +2162,7 @@ public class ServerGamePacketListenerImpl extends ServerCommonPacketListenerImpl
+                     CompletableFuture<Component> componentFuture = this.server.getChatDecorator().decorate(this.player, null, playerchatmessage.decoratedContent()); // Paper
+ 
+                     this.chatMessageChain.append(CompletableFuture.allOf(completablefuture, componentFuture), (filteredtext) -> {
+-                        PlayerChatMessage playerchatmessage1 = playerchatmessage.filter(completablefuture.join().mask()).withResult(componentFuture.join()); // Paper
++                        PlayerChatMessage playerchatmessage1 = playerchatmessage.withUnsignedContent(componentFuture.join()).filter(completablefuture.join().mask()); // Paper
+ 
+                         this.broadcastChatMessage(playerchatmessage1);
+                     });
